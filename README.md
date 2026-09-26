@@ -12,3 +12,7 @@ method setOnHypixel -> setConnectedToHypixel
 ```
 
 However it's extremely unlikely you'll be hindered by this - it implements `HypixelModAPIImplementation` which you will most likely be working with.
+
+## Installation
+
+Please either (a) see releases or (b) use [jitpack.io](https://jitpack.io/#darraghd493/LegacyFabricModAPI). 
