@@ -1,124 +1,61 @@
-class ServerCredentials {
-    String username
-    String password
+plugins {
+    id "io.freefair.lombok" version "9.7.0"
 
-    ServerCredentials(String username, String password) {
-        this.username = username
-        this.password = password
-    }
+    id "net.fabricmc.fabric-loom-remap" version "${loom_version}"
+    id "legacy-looming" version "${loom_version}"
+    id "maven-publish"
 }
 
-static ServerCredentials getServerCredentials(String serverId) {
-    def settingsXml = new File(System.getProperty("user.home"), ".m2/settings.xml")
-    def mavenSettings = new XmlSlurper().parse(settingsXml)
+version = project.mod_version
+group = project.maven_group
 
-    for (final def server in mavenSettings.servers.server) {
-        if (server.id == serverId) {
-            return new ServerCredentials(server.username.text(), server.password.text())
-        }
-    }
-
-    return null
+base {
+    archivesName = project.archives_base_name
 }
 
-// For those who want the bleeding edge
-buildscript {
-    repositories {
-        maven {
-            name = "forge"
-            url = "https://files.minecraftforge.net/maven"
-        }
+repositories {
+    maven {
+        url "https://repo.hypixel.net/repository/Hypixel/"
     }
-    dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
-    }
-}
-apply plugin: 'net.minecraftforge.gradle.forge'
-allprojects {
-    apply plugin: 'maven-publish'
-    version = "1.0.2" // First 3 numbers should correspond to the version of the API, last number is for the mod itself for any changes/fixes
-    group = "net.hypixel" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-    archivesBaseName = "HypixelModAPI"
-
-    repositories {
-        maven {
-            url "https://repo.hypixel.net/repository/Hypixel/"
-        }
-        maven {
-            url "https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1"
-        }
-        mavenLocal()
-    }
-
-    publishing {
-        publications {
-            maven(MavenPublication) {
-                groupId = project.group
-                artifactId = project == rootProject ? 'mod-api-forge' : ('mod-api-forge-' + project.name)
-                version = project.version
-                    from components.java
-                }
-        }
-        repositories {
-            maven {
-                url = 'https://repo.hypixel.net/repository/Hypixel/'
-                ServerCredentials serverCreds = getServerCredentials("Hypixel")
-                credentials {
-                    username = serverCreds.username
-                    password = serverCreds.password
-                }
-            }
-        }
-    }
-}
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-minecraft {
-    version = "1.8.9-11.15.1.1722"
-//    version = "1.8.9-11.15.1.2318-1.8.9"
-    runDir = "run"
-
-    mappings = "stable_22"
-
-    replace('${version}', project.version)
-    replaceIn("ForgeModAPI.java")
-}
-
-configurations {
-    shade
-    compile.extendsFrom shade
 }
 
 dependencies {
-    shade "net.hypixel:mod-api:1.0.2"
-    runtimeOnly "me.djtheredstoner:DevAuth-forge-legacy:1.2.1"
-}
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings(legacy.yarn(project.minecraft_version, project.yarn_build))
 
-jar {
-    configurations.shade.each { dep ->
-        from(project.zipTree(dep)) {
-            exclude 'META-INF', 'META-INF/**'
-        }
-    }
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    modImplementation "net.hypixel:mod-api:1.0.2"
+    include "net.hypixel:mod-api:1.0.2"
 }
 
 processResources {
-    // this will ensure that this task is redone when the versions change.
     inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
 
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-
-        // replace version and mcversion
-        expand 'version': project.version, 'mcversion': project.minecraft.version
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
     }
+}
 
-    // copy everything else, thats not the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+
+    if (JavaVersion.current().isJava9Compatible()) {
+        it.options.release = 8
+    }
+}
+
+java {
+    withSourcesJar()
+
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+jar {
+    inputs.property "archivesName", project.base.archivesName
+
+    from("LICENSE") {
+        rename { "${it}_${inputs.properties.archivesName}"}
     }
 }
