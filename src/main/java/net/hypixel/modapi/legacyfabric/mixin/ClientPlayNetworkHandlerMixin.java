@@ -22,15 +22,4 @@ public final class ClientPlayNetworkHandlerMixin {
             LegacyFabricModAPI.LOGGER.info("Updated network handler.");
         }
     }
-
-    @Inject(method = "onDisconnected", at = @At("HEAD"))
-    private void onDisconnected(CallbackInfo ci) {
-        LegacyFabricModAPI api = LegacyFabricModAPI.getInstance();
-        api.setNetHandler(null);
-        api.setConnectedToHypixel(false);
-
-        if (LegacyFabricModAPI.DEBUG_MODE) {
-            LegacyFabricModAPI.LOGGER.info("Cleared network handler.");
-        }
-    }
 }

@@ -16,9 +16,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * @author darraghd493
  */
 @Mixin(ClientConnection.class)
-public final class ClientConnectionMixin {
+public abstract class ClientConnectionMixin {
     @Shadow
     private Channel channel;
+
+    @Shadow
+    public abstract PacketListener getPacketListener();
 
     @Inject(method = "setPacketListener", at = @At("TAIL"))
     private void onSetPacketListener(PacketListener listener, CallbackInfo ci) {
@@ -33,6 +36,19 @@ public final class ClientConnectionMixin {
                         "hypixel_mod_api_packet_handler",
                         PacketHandler.INSTANCE
                 );
+            }
+        }
+    }
+
+    @Inject(method = "disconnect", at = @At("HEAD"))
+    private void onDisconnect(CallbackInfo ci) {
+        if (this.getPacketListener() instanceof ClientPlayNetworkHandler && this.channel != null) {
+            LegacyFabricModAPI api = LegacyFabricModAPI.getInstance();
+            api.setNetHandler(null);
+            api.setConnectedToHypixel(false);
+
+            if (LegacyFabricModAPI.DEBUG_MODE) {
+                LegacyFabricModAPI.LOGGER.info("Cleared network handler.");
             }
         }
     }
